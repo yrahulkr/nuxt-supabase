@@ -2,7 +2,7 @@
 # Usage: make deploy-todo-apprunner APP_NAME=my-app AWS_PROFILE=test
 
 APP_NAME ?= nuxt-supabase-todo
-AWS_PROFILE ?= default
+AWS_PROFILE ?= test
 REGION ?= us-east-1
 GITHUB_REPO ?= $(shell git config --get remote.origin.url | sed 's/.*github.com[:/]\(.*\)\.git/\1/')
 BRANCH ?= main

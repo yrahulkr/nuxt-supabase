@@ -2,89 +2,162 @@
 
 ## Prerequisites
 - AWS Account with App Runner access
-- GitHub repository with your code
+- GitHub repository (can be private)
 - Supabase project
+- AWS CLI configured with appropriate profile
 
-## Deployment Steps
+## Quick Deployment with Makefile
 
-### 1. Push Code to GitHub
+### 🚀 Deploy Your App
 ```bash
-git add .
-git commit -m "Prepare for AWS App Runner deployment"
-git push origin main
+# Simple deployment (uses defaults)
+make deploy-todo-apprunner
+
+# Custom deployment with AWS profile
+make deploy-todo-apprunner APP_NAME=my-todo-app AWS_PROFILE=test REGION=us-west-2
 ```
 
-### 2. Create App Runner Service
-1. Go to AWS Console > App Runner
-2. Click "Create service"
-3. **Source**: GitHub
-4. Connect to your repository
-5. **Branch**: main
-6. **Build settings**: Use configuration file (`apprunner.yaml`)
+### 📊 Management Commands
+```bash
+# Check deployment status
+make status-todo-apprunner
+
+# Get your app URL
+make url-todo-apprunner
+
+# View application logs
+make logs-todo-apprunner
+
+# Open app in browser
+make open-todo-apprunner
+
+# Restart deployment (after code changes)
+make restart-todo-apprunner
+
+# Pause service (saves costs)
+make pause-todo-apprunner
+
+# Resume service
+make resume-todo-apprunner
+
+# Delete service
+make delete-todo-apprunner
+```
+
+### 🛠️ Development Commands
+```bash
+# Local development
+make dev
+
+# Build locally
+make build
+
+# Run linting
+make lint
+```
+
+## Manual Deployment Steps (Alternative)
+
+### 1. GitHub Repository Setup
+- Repository can be **private** or public
+- For private repos, you'll need to connect GitHub App on first deployment
+- Automatic deployments are enabled by default
+
+### 2. Deploy with Makefile
+The Makefile automatically:
+- Commits and pushes any pending changes
+- Creates the App Runner service
+- Configures automatic deployments from your Git branch
 
 ### 3. Configure Environment Variables
-In the App Runner console, add these environment variables:
+**After deployment**, add these in AWS Console > App Runner > Your Service > Configuration:
 
 **Required:**
 - `SUPABASE_URL`: Your Supabase project URL
-- `SUPABASE_KEY`: Your Supabase anon key
+- `SUPABASE_KEY`: Your Supabase anon key  
 - `NODE_ENV`: `production`
 - `NITRO_PRESET`: `node-server`
 
 ### 4. Update Supabase Authentication Settings
-1. Go to Supabase Dashboard > Authentication > URL Configuration
-2. Add your App Runner URL to:
+1. Get your App Runner URL: `make url-todo-apprunner`
+2. Go to Supabase Dashboard > Authentication > URL Configuration
+3. Add your App Runner URL to:
    - **Site URL**: `https://your-app-runner-url.region.awsapprunner.com`
    - **Redirect URLs**: 
      - `https://your-app-runner-url.region.awsapprunner.com/confirm`
 
-### 5. Update GitHub OAuth App (if using)
-1. Go to GitHub > Settings > Developer settings > OAuth Apps
-2. Update your OAuth app:
-   - **Homepage URL**: `https://your-app-runner-url.region.awsapprunner.com`
-   - **Authorization callback URL**: `https://euvlrvaylblltpwkaxec.supabase.co/auth/v1/callback`
-
-## Configuration Files Created
+## Configuration Files
 
 ### `apprunner.yaml`
-- Configures Node.js 18 runtime
-- Installs dependencies and builds the app
-- Runs the production server on port 3000
+- Configures **Node.js 20** runtime (matches your local environment)
+- Installs production dependencies only
+- Builds the Nuxt application
+- Runs production server on port 3000
+- Instance size: 0.25 vCPU / 0.5 GB (cost-optimized)
+
+### `Makefile` 
+- **Variables**: APP_NAME, AWS_PROFILE, REGION, GITHUB_REPO, BRANCH
+- **Auto-commit**: Commits and pushes changes before deployment
+- **Error handling**: Gracefully handles existing services
+- **GitHub integration**: Works with private repositories
 
 ### `package.json` Updates
-- Added `start` script for production server
-- Points to `.output/server/index.mjs` (Nuxt 4 output)
+- Added `start` script: `node .output/server/index.mjs`
+- Points to Nuxt 4 server output
 
 ### `nuxt.config.ts` Updates
-- Production optimizations
-- Security headers
+- Production optimizations (devtools disabled in production)
+- Security headers for production
 - Nitro server preset configuration
 - Runtime config for environment variables
+- Asset compression enabled
 
 ## Deployment Process
-1. App Runner pulls from your GitHub repository
-2. Runs `npm ci --only=production` to install dependencies
-3. Runs `npm run build` to build the Nuxt application
-4. Starts the server with `npm start`
-5. App is available on port 3000
+1. **Makefile commits** any pending changes and pushes to GitHub
+2. **App Runner pulls** from your GitHub repository (private repos supported)
+3. **Build phase**: Runs `npm ci --only=production` and `npm run build`
+4. **Run phase**: Starts server with `npm start` on port 3000
+5. **Auto-scaling**: Handles traffic automatically
+6. **Auto-deployment**: New commits trigger automatic redeployments
+
+## Default Configuration
+- **App Name**: `nuxt-supabase-todo`
+- **AWS Profile**: `default` 
+- **Region**: `us-east-1`
+- **Branch**: `main`
+- **Instance**: 0.25 vCPU, 0.5 GB RAM
+- **Runtime**: Node.js 20
 
 ## Environment Variables Reference
-Copy your values from `.env` and set them in App Runner:
+Set these in AWS App Runner console after deployment:
 
-```
+```bash
 SUPABASE_URL=https://euvlrvaylblltpwkaxec.supabase.co
 SUPABASE_KEY=your-supabase-anon-key
 NODE_ENV=production
 NITRO_PRESET=node-server
 ```
 
-## Monitoring
-- App Runner provides automatic logs and metrics
-- Health checks are configured on port 3000
-- Automatic scaling based on traffic
+## Private Repository Setup
+1. **First deployment**: Use AWS Console to connect GitHub App
+2. **Grant access** to your private repository
+3. **Subsequent deployments**: Use Makefile commands normally
+
+## Cost Optimization
+- **Pause service** when not in use: `make pause-todo-apprunner`
+- **Resume service** when needed: `make resume-todo-apprunner`
+- **Smallest instance** size configured (0.25 vCPU / 0.5 GB)
+- **Auto-scaling** only when traffic increases
+
+## Monitoring & Debugging
+- **Status**: `make status-todo-apprunner`
+- **Logs**: `make logs-todo-apprunner` 
+- **AWS Console**: App Runner service dashboard
+- **Health checks**: Automatic on port 3000
 
 ## Troubleshooting
-- Check App Runner logs for build/runtime errors
-- Verify environment variables are set correctly
-- Ensure Supabase redirect URLs are updated
-- Test authentication flows after deployment
+- **Build failures**: Check `make logs-todo-apprunner` for errors
+- **Environment variables**: Verify they're set in AWS Console
+- **Supabase auth**: Update redirect URLs after deployment
+- **Private repo**: Ensure GitHub App has repository access
+- **Region issues**: Specify correct region with `REGION=us-west-2`
