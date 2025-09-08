@@ -18,12 +18,36 @@ commit-changes:
 		echo "✓ No changes to commit"; \
 	fi
 
-# Deploy Nuxt app to App Runner
+# Create GitHub connection (run this first if you haven't connected GitHub)
+create-github-connection:
+	@export AWS_PROFILE=$(AWS_PROFILE); \
+	echo "Creating GitHub connection - you'll need to authorize in your browser"; \
+	aws apprunner create-connection \
+		--connection-name "github-$(shell echo $(APP_NAME) | head -c 18)" \
+		--provider-type GITHUB \
+		--region $(REGION)
+
+# List GitHub connections
+list-github-connections:
+	@export AWS_PROFILE=$(AWS_PROFILE); \
+	aws apprunner list-connections --region $(REGION) --output table
+
+# Deploy Nuxt app to App Runner (requires GitHub connection)
 deploy-todo-apprunner: commit-changes
 	@export AWS_PROFILE=$(AWS_PROFILE); \
+	CONNECTION_ARN=$$(aws apprunner list-connections --region $(REGION) --query 'ConnectionSummaryList[?ProviderType==`GITHUB` && Status==`AVAILABLE`] | [0].ConnectionArn' --output text 2>/dev/null); \
+	if [ "$$CONNECTION_ARN" = "None" ] || [ -z "$$CONNECTION_ARN" ]; then \
+		echo "❌ No GitHub connection found. Please run:"; \
+		echo "   make create-github-connection"; \
+		echo "   Then complete the authorization in your browser"; \
+		echo "   Wait for connection status to become AVAILABLE"; \
+		echo "   Then run this command again"; \
+		exit 1; \
+	fi; \
+	echo "✅ Using GitHub connection: $$CONNECTION_ARN"; \
 	aws apprunner create-service \
 		--service-name "$(APP_NAME)" \
-		--source-configuration '{"CodeRepository":{"RepositoryUrl":"https://github.com/$(GITHUB_REPO)","SourceCodeVersion":{"Type":"BRANCH","Value":"$(BRANCH)"},"CodeConfiguration":{"ConfigurationSource":"REPOSITORY"}},"AutoDeploymentsEnabled":true}' \
+		--source-configuration "{\"CodeRepository\":{\"RepositoryUrl\":\"https://github.com/$(GITHUB_REPO)\",\"SourceCodeVersion\":{\"Type\":\"BRANCH\",\"Value\":\"$(BRANCH)\"},\"CodeConfiguration\":{\"ConfigurationSource\":\"REPOSITORY\"}},\"AutoDeploymentsEnabled\":true}" \
 		--instance-configuration '{"Cpu":"0.25 vCPU","Memory":"0.5 GB"}' \
 		--region $(REGION) || echo "Service may already exist, updating instead"; \
 	aws apprunner start-deployment --service-arn $$(aws apprunner list-services --query 'ServiceSummaryList[?ServiceName==`$(APP_NAME)`].ServiceArn' --output text --region $(REGION)) --region $(REGION) 2>/dev/null || echo "Deployment will start automatically"
