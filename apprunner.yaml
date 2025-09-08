@@ -10,5 +10,7 @@ run:
   network:
     port: 3000
   env:
-    NODE_ENV: production
-    NITRO_PRESET: node-server
+    - name: NODE_ENV
+      value: production
+    - name: NITRO_PRESET
+      value: node-server
