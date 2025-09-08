@@ -23,7 +23,7 @@ deploy-todo-apprunner: commit-changes
 	@export AWS_PROFILE=$(AWS_PROFILE); \
 	aws apprunner create-service \
 		--service-name "$(APP_NAME)" \
-		--source-configuration '{"ImageRepository":null,"CodeRepository":{"RepositoryUrl":"https://github.com/$(GITHUB_REPO)","SourceCodeVersion":{"Type":"BRANCH","Value":"$(BRANCH)"},"CodeConfiguration":{"ConfigurationSource":"CONFIGURATION_FILE"}},"AutoDeploymentsEnabled":true}' \
+		--source-configuration '{"CodeRepository":{"RepositoryUrl":"https://github.com/$(GITHUB_REPO)","SourceCodeVersion":{"Type":"BRANCH","Value":"$(BRANCH)"},"CodeConfiguration":{"ConfigurationSource":"CONFIGURATION_FILE"}},"AutoDeploymentsEnabled":true}' \
 		--instance-configuration '{"Cpu":"0.25 vCPU","Memory":"0.5 GB"}' \
 		--region $(REGION) || echo "Service may already exist, updating instead"; \
 	aws apprunner start-deployment --service-arn $$(aws apprunner list-services --query 'ServiceSummaryList[?ServiceName==`$(APP_NAME)`].ServiceArn' --output text --region $(REGION)) --region $(REGION) 2>/dev/null || echo "Deployment will start automatically"
