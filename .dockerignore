@@ -1,0 +1,17 @@
+node_modules
+npm-debug.log
+.nuxt
+.output
+.git
+.gitignore
+README.md
+.env
+.env.local
+.env.production
+.env.example
+.DS_Store
+coverage
+.nyc_output
+Dockerfile
+.dockerignore
+apprunner.yaml

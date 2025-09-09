@@ -2,46 +2,66 @@
 
 ## Prerequisites
 - AWS Account with App Runner access
-- GitHub repository (can be private)
+- Docker installed locally
+- AWS ECR repository access
 - Supabase project
 - AWS CLI configured with appropriate profile
 
-## Quick Deployment with Makefile
+## 🐳 Docker-based Deployment
 
-### 🚀 Deploy Your App
+### Quick Start
 ```bash
-# Simple deployment (uses defaults)
-make deploy-todo-apprunner
+# Deploy with defaults (uses test profile, us-east-1 region)
+make deploy-docker-apprunner
 
-# Custom deployment with AWS profile
-make deploy-todo-apprunner APP_NAME=my-todo-app AWS_PROFILE=test REGION=us-west-2
+# Custom deployment
+make deploy-docker-apprunner APP_NAME=my-todo-app AWS_PROFILE=production REGION=us-west-2
 ```
+
+This single command will:
+1. **Build** Docker image with Supabase environment variables baked in
+2. **Create** ECR repository if it doesn't exist
+3. **Push** image to ECR
+4. **Create** App Runner ECR access role
+5. **Deploy** to App Runner
 
 ### 📊 Management Commands
 ```bash
 # Check deployment status
-make status-todo-apprunner
+make status-apprunner
 
 # Get your app URL
-make url-todo-apprunner
+make url-apprunner
 
 # View application logs
-make logs-todo-apprunner
+make logs-apprunner
 
 # Open app in browser
-make open-todo-apprunner
+make open-apprunner
 
 # Restart deployment (after code changes)
-make restart-todo-apprunner
+make restart-apprunner
 
 # Pause service (saves costs)
-make pause-todo-apprunner
+make pause-apprunner
 
 # Resume service
-make resume-todo-apprunner
+make resume-apprunner
 
 # Delete service
-make delete-todo-apprunner
+make delete-apprunner
+```
+
+### 🐳 Docker Commands
+```bash
+# Build Docker image locally
+make build-docker
+
+# Push Docker image to ECR
+make push-docker
+
+# Test Docker image locally (port 3001)
+make test-docker
 ```
 
 ### 🛠️ Development Commands
@@ -54,110 +74,130 @@ make build
 
 # Run linting
 make lint
+
+# Show all available commands
+make help
 ```
 
-## Manual Deployment Steps (Alternative)
+## Configuration
 
-### 1. GitHub Repository Setup
-- Repository can be **private** or public
-- For private repos, you'll need to connect GitHub App on first deployment
-- Automatic deployments are enabled by default
+### Default Settings
+The Makefile includes these defaults (can be overridden):
 
-### 2. Deploy with Makefile
-The Makefile automatically:
-- Commits and pushes any pending changes
-- Creates the App Runner service
-- Configures automatic deployments from your Git branch
+- **APP_NAME**: `nuxt-supabase-todo`
+- **AWS_PROFILE**: `test` 
+- **REGION**: `us-east-1`
+- **SUPABASE_URL**: `https://euvlrvaylblltpwkaxec.supabase.co`
+- **SUPABASE_KEY**: Your Supabase anon key (included in Makefile)
 
-### 3. Configure Environment Variables
-**After deployment**, add these in AWS Console > App Runner > Your Service > Configuration:
+### Docker Image Build
+The Docker image is built with:
+- **Supabase environment variables** baked in at build time
+- **Node.js 22 Alpine** base image
+- **Production optimizations** (dependency pruning, compression)
+- **Port 3000** exposed for the Nuxt server
 
-**Required:**
-- `SUPABASE_URL`: Your Supabase project URL
-- `SUPABASE_KEY`: Your Supabase anon key  
-- `NODE_ENV`: `production`
-- `NITRO_PRESET`: `node-server`
+### App Runner Configuration
+- **Instance**: 0.25 vCPU, 0.5 GB RAM (cost-optimized)
+- **Runtime Environment**: 
+  - `NODE_ENV=production`
+  - `NITRO_PRESET=node-server`
+- **Auto-deployment**: Disabled (manual deployments via Docker)
 
-### 4. Update Supabase Authentication Settings
-1. Get your App Runner URL: `make url-todo-apprunner`
+## Deployment Process
+
+1. **Build Phase**: Docker builds the Nuxt app with Supabase config
+2. **Push Phase**: Image is tagged and pushed to ECR
+3. **Deploy Phase**: App Runner creates service from ECR image
+4. **Ready**: App available at the App Runner URL
+
+## Supabase Configuration
+
+### Authentication Setup
+After deployment:
+1. Get your App Runner URL: `make url-apprunner`
 2. Go to Supabase Dashboard > Authentication > URL Configuration
 3. Add your App Runner URL to:
    - **Site URL**: `https://your-app-runner-url.region.awsapprunner.com`
    - **Redirect URLs**: 
      - `https://your-app-runner-url.region.awsapprunner.com/confirm`
 
-## Configuration Files
+### Environment Variables
+The following are **built into the Docker image**:
+- `SUPABASE_URL`: Your Supabase project URL
+- `SUPABASE_KEY`: Your Supabase anon key
 
-### `apprunner.yaml`
-- Configures **Node.js 20** runtime (matches your local environment)
-- Installs production dependencies only
-- Builds the Nuxt application
-- Runs production server on port 3000
-- Instance size: 0.25 vCPU / 0.5 GB (cost-optimized)
-
-### `Makefile` 
-- **Variables**: APP_NAME, AWS_PROFILE, REGION, GITHUB_REPO, BRANCH
-- **Auto-commit**: Commits and pushes changes before deployment
-- **Error handling**: Gracefully handles existing services
-- **GitHub integration**: Works with private repositories
-
-### `package.json` Updates
-- Added `start` script: `node .output/server/index.mjs`
-- Points to Nuxt 4 server output
-
-### `nuxt.config.ts` Updates
-- Production optimizations (devtools disabled in production)
-- Security headers for production
-- Nitro server preset configuration
-- Runtime config for environment variables
-- Asset compression enabled
-
-## Deployment Process
-1. **Makefile commits** any pending changes and pushes to GitHub
-2. **App Runner pulls** from your GitHub repository (private repos supported)
-3. **Build phase**: Runs `npm ci --only=production` and `npm run build`
-4. **Run phase**: Starts server with `npm start` on port 3000
-5. **Auto-scaling**: Handles traffic automatically
-6. **Auto-deployment**: New commits trigger automatic redeployments
-
-## Default Configuration
-- **App Name**: `nuxt-supabase-todo`
-- **AWS Profile**: `default` 
-- **Region**: `us-east-1`
-- **Branch**: `main`
-- **Instance**: 0.25 vCPU, 0.5 GB RAM
-- **Runtime**: Node.js 20
-
-## Environment Variables Reference
-Set these in AWS App Runner console after deployment:
-
-```bash
-SUPABASE_URL=https://euvlrvaylblltpwkaxec.supabase.co
-SUPABASE_KEY=your-supabase-anon-key
-NODE_ENV=production
-NITRO_PRESET=node-server
-```
-
-## Private Repository Setup
-1. **First deployment**: Use AWS Console to connect GitHub App
-2. **Grant access** to your private repository
-3. **Subsequent deployments**: Use Makefile commands normally
+App Runner runtime environment includes:
+- `NODE_ENV=production`
+- `NITRO_PRESET=node-server`
 
 ## Cost Optimization
-- **Pause service** when not in use: `make pause-todo-apprunner`
-- **Resume service** when needed: `make resume-todo-apprunner`
+- **Pause service** when not in use: `make pause-apprunner`
+- **Resume service** when needed: `make resume-apprunner`
 - **Smallest instance** size configured (0.25 vCPU / 0.5 GB)
-- **Auto-scaling** only when traffic increases
+- **Manual deployments** only (no auto-deployment costs)
 
 ## Monitoring & Debugging
-- **Status**: `make status-todo-apprunner`
-- **Logs**: `make logs-todo-apprunner` 
+- **Status**: `make status-apprunner`
+- **Logs**: `make logs-apprunner` 
+- **Local testing**: `make test-docker` (runs on port 3001)
 - **AWS Console**: App Runner service dashboard
-- **Health checks**: Automatic on port 3000
 
 ## Troubleshooting
-- **Build failures**: Check `make logs-todo-apprunner` for errors
-- **Environment variables**: Verify they're set in AWS Console
-- **Supabase auth**: Update redirect URLs after deployment
-- **Private repo**: Ensure GitHub App has repository access
-- **Region issues**: Specify correct region with `REGION=us-west-2`
+
+### Build Issues
+```bash
+# Test Docker build locally
+make build-docker
+
+# Test image locally
+make test-docker
+```
+
+### Deployment Issues
+```bash
+# Check service status
+make status-apprunner
+
+# View logs
+make logs-apprunner
+
+# Restart service
+make restart-apprunner
+```
+
+### Access Issues
+- Verify AWS profile has ECR and App Runner permissions
+- Check that IAM role `AppRunnerECRAccessRole` was created
+- Ensure ECR repository exists in the correct region
+
+### Supabase Issues
+- Verify Supabase URL and key in Makefile are correct
+- Update Supabase auth redirect URLs after deployment
+- Check that environment variables are properly set in the Docker image
+
+## Advanced Usage
+
+### Custom Supabase Config
+If you need different Supabase settings, update the Makefile variables:
+```bash
+make deploy-docker-apprunner \
+  SUPABASE_URL=https://your-project.supabase.co \
+  SUPABASE_KEY=your-anon-key
+```
+
+### Multiple Environments
+Deploy to different environments:
+```bash
+# Production
+make deploy-docker-apprunner \
+  APP_NAME=todo-prod \
+  AWS_PROFILE=production \
+  REGION=us-west-2
+
+# Staging  
+make deploy-docker-apprunner \
+  APP_NAME=todo-staging \
+  AWS_PROFILE=staging \
+  REGION=us-east-1
+```
