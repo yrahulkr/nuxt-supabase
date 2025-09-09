@@ -29,6 +29,7 @@ create-webapps-ecr:
 build-docker:
 	@echo "🐳 Building Docker image with Supabase configuration..."; \
 	docker build \
+		--platform linux/amd64 \
 		--build-arg SUPABASE_URL="$(SUPABASE_URL)" \
 		--build-arg SUPABASE_KEY="$(SUPABASE_KEY)" \
 		-t $(APP_NAME):latest \
@@ -67,6 +68,7 @@ deploy-docker-apprunner: build-docker push-docker create-apprunner-access-role
 		--service-name "$(APP_NAME)" \
 		--source-configuration '{"ImageRepository":{"ImageIdentifier":"$(DOCKER_IMAGE)","ImageConfiguration":{"Port":"3000","RuntimeEnvironmentVariables":{"NODE_ENV":"production","NITRO_PRESET":"node-server"}},"ImageRepositoryType":"ECR"},"AuthenticationConfiguration":{"AccessRoleArn":"arn:aws:iam::'$$ACCOUNT_ID':role/AppRunnerECRAccessRole"},"AutoDeploymentsEnabled":false}' \
 		--instance-configuration '{"Cpu":"0.25 vCPU","Memory":"0.5 GB"}' \
+		--health-check-configuration '{"Protocol":"HTTP","Path":"/","Interval":20,"Timeout":10,"HealthyThreshold":1,"UnhealthyThreshold":10}' \
 		--region $(REGION) || echo "Service may already exist, updating instead"
 
 # Delete App Runner service
@@ -140,24 +142,25 @@ test-docker: build-docker
 	@echo "🧪 Testing Docker image locally on port 3001..."; \
 	docker run --rm -p 3001:3000 $(APP_NAME):latest
 
+
 # ============================================
 # Help
 # ============================================
 
 help:
 	@echo "Available commands:"
-	@echo "  deploy-docker-apprunner  - Build and deploy using Docker to App Runner"
-	@echo "  build-docker            - Build Docker image with Supabase config"
-	@echo "  push-docker             - Push Docker image to ECR"
-	@echo "  test-docker             - Test Docker image locally on port 3001"
-	@echo "  status-apprunner        - Check App Runner service status"
-	@echo "  logs-apprunner          - View App Runner service logs"
-	@echo "  url-apprunner           - Get App Runner service URL"
-	@echo "  open-apprunner          - Open App Runner service in browser"
-	@echo "  pause-apprunner         - Pause App Runner service"
-	@echo "  resume-apprunner        - Resume App Runner service"
-	@echo "  restart-apprunner       - Restart App Runner service"
-	@echo "  delete-apprunner        - Delete App Runner service"
-	@echo "  dev                     - Start local development server"
-	@echo "  build                   - Build locally"
-	@echo "  lint                    - Run linting"
+	@echo "  App Runner:"
+	@echo "    deploy-docker-apprunner  - Build and deploy using Docker to App Runner"
+	@echo "    status-apprunner        - Check App Runner service status"
+	@echo "    logs-apprunner          - View App Runner service logs"
+	@echo "    delete-apprunner        - Delete App Runner service"
+	@echo ""
+	@echo "  Docker:"
+	@echo "    build-docker            - Build Docker image with Supabase config"
+	@echo "    push-docker             - Push Docker image to ECR"
+	@echo "    test-docker             - Test Docker image locally on port 3001"
+	@echo ""
+	@echo "  Development:"
+	@echo "    dev                     - Start local development server"
+	@echo "    build                   - Build locally"
+	@echo "    lint                    - Run linting"
