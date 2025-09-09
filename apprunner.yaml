@@ -14,3 +14,8 @@ run:
       value: production
     - name: NITRO_PRESET
       value: node-server
+  secrets:
+    - name: SUPABASE_URL
+      value-from: "arn:aws:secretsmanager:us-east-1:462338893227:secret:nuxt-supabase-todo/config-EU26yF:SUPABASE_URL::"
+    - name: SUPABASE_KEY
+      value-from: "arn:aws:secretsmanager:us-east-1:462338893227:secret:nuxt-supabase-todo/config-EU26yF:SUPABASE_KEY::"
