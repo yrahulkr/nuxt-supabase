@@ -70,3 +70,4 @@ Uses **@nuxt/ui** components (free version):
 - Custom theme config in `app/app.config.ts`
 - Primary color: emerald, Neutral: slate
 - Note: This project uses the free @nuxt/ui, not the subscription-based @nuxt/ui-pro
+- Deployment
